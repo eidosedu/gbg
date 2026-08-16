@@ -1,0 +1,11 @@
+{
+  "name": "GBG Placar",
+  "short_name": "GBG Placar",
+  "description": "Placar interativo para o Jogo do Bom Comportamento na sala de aula.",
+  "start_url": "index.html",
+  "display": "standalone",
+  "orientation": "landscape-primary",
+  "background_color": "#F8FAFC",
+  "theme_color": "#3B82F6",
+  "icons": []
+}
