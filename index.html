@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GBG - Jogo do Bom Comportamento</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --surface-hover: #f1f5f9;
+            --surface-active: #e2e8f0;
+            --text: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --accent-light: #eff6ff;
+            
+            --success: #10b981;
+            --success-light: #ecfdf5;
+            
+            --warning: #f59e0b;
+            --warning-light: #fffbeb;
+            
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --danger-light: #fef2f2;
+            
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- Header / Topbar --- */
+        .topbar {
+            padding: 20px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--surface);
+            border-bottom: 1px solid var(--border);
+            z-index: 10;
+        }
+
+        .topbar-title {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .topbar-title h1 { font-size: 1.5rem; font-weight: 800; color: var(--text); letter-spacing: -0.5px;}
+        .topbar-title span { font-size: 0.95rem; color: var(--accent); font-weight: 700; margin-top: 4px; padding: 4px 12px; background: var(--accent-light); border-radius: 20px;}
+
+        .icon-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 10px;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+        .icon-btn:hover { background-color: var(--surface-hover); color: var(--accent); }
+
+        /* --- Main Content / Carrossel Horizontal --- */
+        .main-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background-color: var(--bg);
+        }
+
+        .teams-scroll-container {
+            flex: 1;
+            display: flex;
+            gap: 24px;
+            overflow-x: auto;
+            padding: 32px;
+            align-items: stretch;
+            scroll-snap-type: x mandatory;
+            scroll-behavior: smooth;
+        }
+        
+        /* Ocultar barra de rolagem mas manter a funcionalidade */
+        .teams-scroll-container::-webkit-scrollbar { display: none; }
+        .teams-scroll-container { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .team-card {
+            min-width: 320px;
+            max-width: 400px;
+            flex: 1;
+            background-color: var(--surface);
+            border: 3px solid var(--border);
+            border-radius: 24px;
+            box-shadow: var(--shadow-md);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            scroll-snap-align: center;
+            transition: all 0.3s ease;
+        }
+
+        /* Cores Dinâmicas Baseadas no Limite */
+        .team-card.safe-state { border-color: var(--success); }
+        .team-card.safe-state .team-header { background-color: var(--success-light); color: var(--success); }
+        
+        .team-card.warning-state { border-color: var(--warning); }
+        .team-card.warning-state .team-header { background-color: var(--warning-light); color: var(--warning); }
+        
+        .team-card.danger-state { border-color: var(--danger); background-color: var(--danger-light); opacity: 0.9;}
+        .team-card.danger-state .team-header { background-color: var(--danger); color: white; }
+
+        .team-header {
+            padding: 24px;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+            transition: all 0.3s ease;
+        }
+        .team-name { font-size: 1.5rem; font-weight: 800; }
+        
+        .team-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 32px 24px;
+        }
+
+        .faults-counter {
+            font-size: 6rem;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+            line-height: 1;
+            color: var(--text);
+            margin-bottom: 8px;
+        }
+        
+        .faults-limit-label {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            margin-bottom: 24px;
+        }
+
+        .team-status-badge {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 1rem;
+            margin-bottom: 32px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .badge-safe { background-color: var(--success-light); color: var(--success); }
+        .badge-warning { background-color: var(--warning-light); color: var(--warning); }
+        .badge-danger { background-color: var(--danger); color: white; }
+
+        .team-actions {
+            display: flex;
+            gap: 16px;
+            width: 100%;
+        }
+        .team-action-btn {
+            padding: 16px;
+            border-radius: 16px;
+            font-weight: 800;
+            font-size: 1.2rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .team-action-btn:active { transform: scale(0.95); }
+        
+        .btn-remove-fault {
+            flex: 1; background-color: var(--surface-hover); color: var(--text-muted);
+        }
+        .btn-remove-fault:hover { background-color: var(--surface-active); color: var(--text); }
+        
+        .btn-add-fault {
+            flex: 3; background-color: var(--danger); color: white; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);
+        }
+        .btn-add-fault:hover { background-color: var(--danger-hover); }
+
+        /* --- Bottom Control Bar --- */
+        .bottom-bar {
+            padding: 24px 32px;
+            background-color: var(--surface);
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .session-timer-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            background: var(--surface-hover);
+            padding: 12px 24px;
+            border-radius: 20px;
+        }
+
+        .session-timer-display {
+            font-size: 1.8rem;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+            color: var(--text);
+            letter-spacing: 1px;
+        }
+
+        .btn-flat {
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .btn-flat:active { transform: scale(0.98); }
+        .btn-primary { background-color: var(--accent); color: white; }
+        .btn-primary:hover { background-color: var(--accent-hover); }
+        .btn-success { background-color: var(--success); color: white; }
+        .btn-success:hover { background-color: var(--success-hover); }
+        .btn-outline { background-color: transparent; border: 2px solid var(--border); color: var(--text); }
+        .btn-outline:hover { background-color: var(--surface-hover); }
+
+        /* --- Modais --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: rgba(15, 23, 42, 0.7); backdrop-filter: blur(6px);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 2000; opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: all; }
+
+        .modal-content {
+            background-color: var(--surface); border-radius: 24px; padding: 40px;
+            width: 600px; max-width: 90%; max-height: 90vh; overflow-y: auto;
+            box-shadow: var(--shadow-lg);
+            transform: scale(0.9); transition: transform 0.3s ease;
+        }
+        .modal-overlay.active .modal-content { transform: scale(1); }
+        .modal-content h3 { font-size: 1.8rem; margin-bottom: 24px; color: var(--text); border-bottom: 1px solid var(--border); padding-bottom: 16px;}
+        
+        .form-group { text-align: left; margin-bottom: 24px; }
+        .form-group label { display: block; margin-bottom: 8px; color: var(--text-muted); font-weight: 700; font-size: 1rem; }
+        
+        .input-flat {
+            width: 100%; padding: 14px 16px; background-color: var(--bg);
+            border: 1px solid var(--border); border-radius: 12px;
+            color: var(--text); font-size: 1.1rem; outline: none; transition: border 0.2s;
+        }
+        .input-flat:focus { border-color: var(--accent); }
+
+        .team-edit-list {
+            display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;
+        }
+        .team-edit-row {
+            display: flex; gap: 12px; align-items: center;
+        }
+        .team-edit-row input { flex: 1; }
+
+        .modal-actions-dual {
+            display: flex; gap: 16px; justify-content: center; margin-top: 32px;
+        }
+        .modal-actions-dual button { flex: 1; }
+
+        /* Evaluation Modal Specifics */
+        #modal-evaluation .modal-content { text-align: center; }
+        .winners-list {
+            font-size: 1.5rem; font-weight: 800; color: var(--success); margin: 24px 0;
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        .losers-list {
+            font-size: 1.1rem; font-weight: 600; color: var(--danger); margin-bottom: 32px;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="topbar">
+        <button class="icon-btn" onclick="handleAndroidBack()" title="Voltar ao Menu">
+            <svg viewBox="0 0 24 24" width="32" height="32" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+        </button>
+
+        <div class="topbar-title">
+            <h1>Jogo do Bom Comportamento</h1>
+            <span id="ui-reward-label">Recompensa: 5 min de Jogo Livre</span>
+        </div>
+
+        <button class="icon-btn" onclick="openSettingsModal()" title="Configurações do Jogo">
+            <svg viewBox="0 0 24 24" width="32" height="32" stroke="currentColor" stroke-width="2.5" fill="none">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1 2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09A1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+        </button>
+    </header>
+
+    <main class="main-container">
+        <div class="teams-scroll-container" id="teams-container">
+            </div>
+    </main>
+
+    <footer class="bottom-bar">
+        <div class="session-timer-wrapper">
+            <button class="icon-btn" style="padding:4px; color:var(--text);" onclick="toggleSessionTimer()" id="btn-play-pause">
+                <svg id="icon-play" viewBox="0 0 24 24" width="28" height="28" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                <svg id="icon-pause" style="display:none;" viewBox="0 0 24 24" width="28" height="28" fill="currentColor"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+            </button>
+            <div class="session-timer-display" id="ui-timer-display">20:00</div>
+        </div>
+
+        <div style="display:flex; gap:16px;">
+            <button class="btn-flat btn-outline" onclick="resetFaultsConfirmation()">Zerar Placar</button>
+            <button class="btn-flat btn-success" onclick="evaluateSession()">
+                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                Encerrar Rodada
+            </button>
+        </div>
+    </footer>
+
+    <div id="modal-settings" class="modal-overlay" onclick="closeModal('modal-settings')">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h3>Configurações do Jogo</h3>
+            
+            <div style="display:flex; gap:16px;">
+                <div class="form-group" style="flex:1;">
+                    <label>Tempo da Sessão (Minutos)</label>
+                    <input type="number" id="input-session-time" class="input-flat" min="1" value="20">
+                </div>
+                <div class="form-group" style="flex:1;">
+                    <label>Limite/Teto de Faltas</label>
+                    <input type="number" id="input-fault-limit" class="input-flat" min="1" value="4">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Recompensa do Dia (Reforçador)</label>
+                <input type="text" id="input-reward" class="input-flat" value="5 min de Jogo Livre">
+            </div>
+
+            <div class="form-group">
+                <label>Equipes Participantes</label>
+                <div class="team-edit-list" id="team-edit-list">
+                    </div>
+                <button class="btn-flat btn-outline" style="width:100%; padding:10px;" onclick="addTeamInput()">+ Adicionar Equipe</button>
+            </div>
+
+            <div class="modal-actions-dual">
+                <button class="btn-flat btn-outline" onclick="closeModal('modal-settings')">Cancelar</button>
+                <button class="btn-flat btn-primary" onclick="saveSettings()">Salvar e Aplicar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-evaluation" class="modal-overlay">
+        <div class="modal-content">
+            <h3>Resultado da Rodada</h3>
+            <p style="color:var(--text-muted); font-size:1.1rem; margin-bottom: 8px;">Equipes que bateram a meta e conquistaram a recompensa:</p>
+            
+            <div class="winners-list" id="eval-winners">
+                </div>
+            
+            <div class="losers-list" id="eval-losers">
+                </div>
+
+            <div style="background:var(--accent-light); color:var(--accent); padding:16px; border-radius:12px; font-weight:700; font-size:1.2rem; margin-bottom: 32px;">
+                <span id="eval-reward-text">Recompensa: ...</span>
+            </div>
+
+            <div class="modal-actions-dual">
+                <button class="btn-flat btn-primary" style="width:100%;" onclick="closeEvaluation()">Zerar e Começar Nova</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-confirm" class="modal-overlay" onclick="closeModal('modal-confirm')">
+        <div class="modal-content" onclick="event.stopPropagation()" style="text-align:center;">
+            <h3 id="confirm-title">Atenção</h3>
+            <p id="confirm-msg" style="color:var(--text-muted); margin-bottom: 32px; font-size: 1.1rem;">Tem certeza?</p>
+            <div class="modal-actions-dual">
+                <button class="btn-flat btn-outline" onclick="closeModal('modal-confirm')">Cancelar</button>
+                <button class="btn-flat btn-primary" onclick="executeConfirm()">Sim, Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Kodular Bridge ---
+        let modalStack = [];
+        let confirmAction = null;
+
+        function handleAndroidBack() {
+            if (modalStack.length > 0) {
+                closeModal(modalStack[modalStack.length - 1]);
+                return;
+            }
+            if (window.AppInventor && window.AppInventor.setWebViewString) {
+                window.AppInventor.setWebViewString("VOLTAR_MENU");
+            }
+        }
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(e => console.log('SW fail:', e));
+            });
+        }
+
+        function openModal(id) {
+            document.getElementById(id).classList.add('active');
+            if(!modalStack.includes(id)) modalStack.push(id);
+        }
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+            modalStack = modalStack.filter(m => m !== id);
+        }
+        function askConfirm(title, msg, callback) {
+            document.getElementById('confirm-title').innerText = title;
+            document.getElementById('confirm-msg').innerText = msg;
+            confirmAction = callback;
+            openModal('modal-confirm');
+        }
+        function executeConfirm() {
+            if(confirmAction) confirmAction();
+            closeModal('modal-confirm');
+        }
+
+        // --- Toque Sonoro (Beep / Fanfarra) ---
+        function playSound(type) {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                if(ctx.state === 'suspended') ctx.resume();
+                
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain); gain.connect(ctx.destination);
+                
+                if (type === 'fault') {
+                    // Som agudo e curto de erro
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(300, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.2);
+                    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+                    osc.start(ctx.currentTime);
+                    osc.stop(ctx.currentTime + 0.2);
+                } else if (type === 'success') {
+                    // Fanfarra simples
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+                    osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.2); // E5
+                    osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.4); // G5
+                    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.1, ctx.currentTime + 0.6);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+                    osc.start(ctx.currentTime);
+                    osc.stop(ctx.currentTime + 0.8);
+                }
+            } catch(e) {}
+        }
+
+        // --- Estado Global (GBG State) ---
+        let state = JSON.parse(localStorage.getItem('gbg_state_v1')) || {
+            limit: 4,
+            reward: "5 min de Jogo Livre",
+            sessionTimeTotal: 20 * 60, 
+            timeRemaining: 20 * 60,
+            isRunning: false,
+            lastTick: null,
+            teams: [
+                { id: 't1', name: 'Equipe Azul', faults: 0 },
+                { id: 't2', name: 'Equipe Amarela', faults: 0 }
+            ]
+        };
+
+        let timerInterval = null;
+
+        function saveState() {
+            localStorage.setItem('gbg_state_v1', JSON.stringify(state));
+        }
+
+        // Inicialização
+        window.onload = () => {
+            // Backup Temporal Logic (Recalcula o tempo se fechou enquanto rodava)
+            if (state.isRunning && state.lastTick) {
+                const now = Date.now();
+                const elapsedSeconds = Math.floor((now - state.lastTick) / 1000);
+                state.timeRemaining -= elapsedSeconds;
+                
+                if (state.timeRemaining <= 0) {
+                    state.timeRemaining = 0;
+                    state.isRunning = false;
+                }
+            }
+            
+            // Corrige UI state mismatch se recarregou a pagina
+            if(state.isRunning) {
+                state.lastTick = Date.now();
+                timerInterval = setInterval(tick, 1000);
+            }
+            
+            updateHeaderUI();
+            renderTeams();
+            updateTimerUI();
+        };
+
+        // --- Motor do Temporizador ---
+        function toggleSessionTimer() {
+            state.isRunning = !state.isRunning;
+            
+            if (state.isRunning) {
+                if(state.timeRemaining === 0) state.timeRemaining = state.sessionTimeTotal; 
+                state.lastTick = Date.now();
+                timerInterval = setInterval(tick, 1000);
+            } else {
+                clearInterval(timerInterval);
+                state.lastTick = null;
+            }
+            
+            saveState();
+            updateTimerUI();
+            try { new (window.AudioContext || window.webkitAudioContext)().resume(); } catch(e){}
+        }
+
+        function tick() {
+            state.timeRemaining--;
+            state.lastTick = Date.now();
+            
+            if (state.timeRemaining <= 0) {
+                state.timeRemaining = 0;
+                state.isRunning = false;
+                state.lastTick = null;
+                clearInterval(timerInterval);
+                playSound('success');
+                evaluateSession();
+            }
+            
+            updateTimerUI();
+            saveState();
+        }
+
+        function updateTimerUI() {
+            const m = Math.floor(state.timeRemaining / 60).toString().padStart(2, '0');
+            const s = (state.timeRemaining % 60).toString().padStart(2, '0');
+            document.getElementById('ui-timer-display').innerText = `${m}:${s}`;
+            
+            document.getElementById('icon-play').style.display = state.isRunning ? 'none' : 'block';
+            document.getElementById('icon-pause').style.display = state.isRunning ? 'block' : 'none';
+        }
+
+        function updateHeaderUI() {
+            document.getElementById('ui-reward-label').innerText = `Recompensa: ${state.reward}`;
+        }
+
+        // --- Gerenciamento de Equipes e Cards ---
+        function renderTeams() {
+            const container = document.getElementById('teams-container');
+            container.innerHTML = '';
+
+            state.teams.forEach(team => {
+                let statusClass = 'safe-state';
+                let badgeClass = 'badge-safe';
+                let statusText = 'DENTRO DA META';
+
+                if (team.faults >= state.limit) {
+                    statusClass = 'danger-state';
+                    badgeClass = 'badge-danger';
+                    statusText = 'META ESTOURADA';
+                } else if (team.faults === state.limit - 1) {
+                    statusClass = 'warning-state';
+                    badgeClass = 'badge-warning';
+                    statusText = 'ÚLTIMA CHANCE';
+                }
+
+                const card = document.createElement('div');
+                card.className = `team-card ${statusClass}`;
+                card.innerHTML = `
+                    <div class="team-header">
+                        <span class="team-name">${team.name}</span>
+                    </div>
+                    <div class="team-body">
+                        <span class="faults-counter">${team.faults}</span>
+                        <span class="faults-limit-label">De ${state.limit} Faltas Máximas</span>
+                        <div class="team-status-badge ${badgeClass}">${statusText}</div>
+                        
+                        <div class="team-actions">
+                            <button class="team-action-btn btn-remove-fault" onclick="changeFault('${team.id}', -1)">- 1</button>
+                            <button class="team-action-btn btn-add-fault" onclick="changeFault('${team.id}', 1)">+ 1 FALTA</button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function changeFault(teamId, amount) {
+            const team = state.teams.find(t => t.id === teamId);
+            if (!team) return;
+            
+            if (amount > 0 && team.faults < state.limit) {
+                playSound('fault'); 
+            }
+
+            team.faults += amount;
+            if (team.faults < 0) team.faults = 0; 
+            
+            saveState();
+            renderTeams();
+        }
+
+        function resetFaultsConfirmation() {
+            askConfirm("Zerar Placar", "Deseja zerar as faltas de todas as equipes e voltar o relógio?", () => {
+                state.teams.forEach(t => t.faults = 0);
+                state.timeRemaining = state.sessionTimeTotal;
+                state.isRunning = false;
+                state.lastTick = null;
+                clearInterval(timerInterval);
+                saveState();
+                renderTeams();
+                updateTimerUI();
+            });
+        }
+
+        // --- Modal de Avaliação de Fim de Rodada ---
+        function evaluateSession() {
+            const winners = state.teams.filter(t => t.faults < state.limit);
+            const losers = state.teams.filter(t => t.faults >= state.limit);
+
+            const winContainer = document.getElementById('eval-winners');
+            const loseContainer = document.getElementById('eval-losers');
+            document.getElementById('eval-reward-text').innerText = `Recompensa: ${state.reward}`;
+
+            if (winners.length > 0) {
+                winContainer.innerHTML = winners.map(t => `<span>🏆 ${t.name} (${t.faults} faltas)</span>`).join('');
+                playSound('success');
+            } else {
+                winContainer.innerHTML = `<span style="color:var(--text-muted);">Nenhuma equipe bateu a meta.</span>`;
+            }
+
+            if (losers.length > 0) {
+                loseContainer.innerHTML = `<br><span style="color:var(--text-muted); font-size:0.95rem;">Estouraram o limite:</span><br>` + 
+                                          losers.map(t => `<span>❌ ${t.name} (${t.faults} faltas)</span>`).join('<br>');
+            } else {
+                loseContainer.innerHTML = ''; 
+            }
+
+            if(state.isRunning) toggleSessionTimer(); 
+            openModal('modal-evaluation');
+        }
+
+        function closeEvaluation() {
+            state.teams.forEach(t => t.faults = 0);
+            state.timeRemaining = state.sessionTimeTotal;
+            saveState();
+            renderTeams();
+            updateTimerUI();
+            closeModal('modal-evaluation');
+        }
+
+        // --- Modal de Configurações ---
+        function openSettingsModal() {
+            document.getElementById('input-session-time').value = Math.floor(state.sessionTimeTotal / 60);
+            document.getElementById('input-fault-limit').value = state.limit;
+            document.getElementById('input-reward').value = state.reward;
+
+            renderTeamInputs();
+            openModal('modal-settings');
+        }
+
+        function renderTeamInputs() {
+            const list = document.getElementById('team-edit-list');
+            list.innerHTML = '';
+            state.teams.forEach((t, idx) => {
+                const row = document.createElement('div');
+                row.className = 'team-edit-row';
+                row.innerHTML = `
+                    <input type="text" class="input-flat team-name-input" data-id="${t.id}" value="${t.name}">
+                    <button class="icon-btn" onclick="removeTeamInput('${t.id}')" style="color:var(--danger); border:1px solid var(--border);"><svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+                `;
+                list.appendChild(row);
+            });
+        }
+
+        function addTeamInput() {
+            state.teams.push({ id: 't' + Date.now(), name: 'Nova Equipe', faults: 0 });
+            renderTeamInputs();
+        }
+
+        function removeTeamInput(id) {
+            if (state.teams.length <= 1) {
+                alert("Você precisa de pelo menos uma equipe!");
+                return;
+            }
+            state.teams = state.teams.filter(t => t.id !== id);
+            renderTeamInputs();
+        }
+
+        function saveSettings() {
+            const timeMins = parseInt(document.getElementById('input-session-time').value);
+            const limit = parseInt(document.getElementById('input-fault-limit').value);
+            const reward = document.getElementById('input-reward').value.trim();
+
+            if (timeMins > 0) {
+                if (state.sessionTimeTotal !== timeMins * 60) {
+                    state.sessionTimeTotal = timeMins * 60;
+                    if(!state.isRunning) state.timeRemaining = state.sessionTimeTotal;
+                }
+            }
+            if (limit > 0) state.limit = limit;
+            if (reward) state.reward = reward;
+
+            const inputs = document.querySelectorAll('.team-name-input');
+            inputs.forEach(inp => {
+                const id = inp.getAttribute('data-id');
+                const t = state.teams.find(x => x.id === id);
+                if (t && inp.value.trim() !== "") t.name = inp.value.trim();
+            });
+
+            saveState();
+            updateHeaderUI();
+            updateTimerUI();
+            renderTeams();
+            closeModal('modal-settings');
+        }
+    </script>
+</body>
+</html>
